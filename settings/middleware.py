@@ -12,7 +12,7 @@ class DebugRequestLoggingMiddleware:
             'Request: %s %s | User %s',
             request.method,
             request.get_full_path(),
-            request.user if request.user.is_auhenticated else "Anonymouse"
+            request.user if request.user.is_authenticated else "Anonymouse"
         )
 
         response = self.get_response(request)
