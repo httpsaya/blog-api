@@ -43,6 +43,9 @@ class Category(Abstract):
         unique=True
     )
 
+    class Meta:
+        verbose_name_plural = 'Categories'
+
 
 class Post(Abstract):
     """

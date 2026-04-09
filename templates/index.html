@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comments</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .header { margin-bottom: 1.5rem; }
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header p { font-size: 13px; color: #666; margin-top: 4px; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1rem;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.connected { background: #1D9E75; }
+    .dot.error     { background: #E24B4A; }
+
+    .comments-box {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 12px;
+      min-height: 320px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 1rem;
+    }
+
+    .empty {
+      margin: auto;
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .comment {
+      display: flex;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .comment.mine .avatar {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .comment-body { flex: 1; }
+
+    .comment-meta {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 3px;
+    }
+
+    .comment-meta strong {
+      color: #1a1a1a;
+      font-weight: 600;
+    }
+
+    .comment-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1a1a1a;
+    }
+
+    .compose {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .compose input[type="text"],
+    .compose textarea {
+      width: 100%;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 12px;
+      border: 1px solid #e5e5e0;
+      border-radius: 8px;
+      background: #f9f9f7;
+      color: #1a1a1a;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .compose input[type="text"]:focus,
+    .compose textarea:focus {
+      border-color: #999;
+    }
+
+    .compose input[type="text"] { max-width: 220px; }
+
+    .compose textarea {
+      resize: none;
+      height: 72px;
+    }
+
+    .compose-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .send-btn {
+      padding: 0 20px;
+      height: 36px;
+      font-size: 14px;
+      font-family: inherit;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #1a1a1a;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.35; cursor: default; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <h1>Comments</h1>
+    <!--
+      В Django шаблоне замени на:
+      <p>Post: <strong>{{ post.title }}</strong></p>
+    -->
+    <p>Post: <strong id="post-label">my-first-post</strong></p>
+  </div>
+
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span id="status-text">Connecting...</span>
+  </div>
+
+  <div class="comments-box" id="comments-box">
+    <div class="empty" id="empty-msg">No comments yet. Be the first!</div>
+  </div>
+
+  <div class="compose">
+  {% if user.is_authenticated %}
+    <div class="comment-meta">Writing as <strong>{{ user.email }}</strong></div>
+    <input type="hidden" id="author-input" value="{{ user.email }}" />
+  {% else %}
+    <p>Please <a href="/login/">login</a> to leave a comment.</p>
+    <input type="hidden" id="author-input" value="Anonymous" />
+  {% endif %}
+  
+  <textarea id="body-input" placeholder="Write a comment..." {% if not user.is_authenticated %}disabled{% endif %}></textarea>
+  <div class="compose-footer">
+    <span class="hint">Ctrl + Enter to send</span>
+    <button class="send-btn" id="send-btn" disabled>Send</button>
+  </div>
+</div>
+</div>
+
+<script>
+  /*
+    Настрой эти переменные под свой проект:
+
+    POST_ID   — id поста, в Django шаблоне: const POST_ID = {{ post.id }};
+    MY_NAME   — имя текущего юзера, в Django шаблоне: const MY_NAME = "{{ request.user.email }}";
+    WS_URL    — путь до твоего Consumer
+  */
+  const POST_ID = 1;
+  const MY_NAME = "";  
+
+  const POST_SLUG = "{{ post.slug }}"; 
+  const WS_URL = `ws://${window.location.host}/ws/posts/${POST_SLUG}/comments/`;
+
+  const dot         = document.getElementById('dot');
+  const statusText  = document.getElementById('status-text');
+  const commentsBox = document.getElementById('comments-box');
+  const sendBtn     = document.getElementById('send-btn');
+  const authorInput = document.getElementById('author-input');
+  const bodyInput   = document.getElementById('body-input');
+
+  let socket = null;
+
+  function setStatus(state, text) {
+    dot.className = 'dot' + (state ? ' ' + state : '');
+    statusText.textContent = text;
+  }
+
+  function getInitials(name) {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  function addComment(author, body) {
+    const emptyMsg = document.getElementById('empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+    
+    const currentEmail = document.getElementById('author-input').value;
+    const isMine = author === currentEmail;
+    
+    const el = document.createElement('div');
+    el.className = 'comment' + (isMine ? ' mine' : '');
+    el.innerHTML = `
+      <div class="avatar">${getInitials(author)}</div>
+      <div class="comment-body">
+        <div class="comment-meta"><strong>${author || 'Unknown'}</strong></div>
+        <div class="comment-text">${escapeHtml(body)}</div>
+      </div>
+    `;
+    commentsBox.appendChild(el);
+    commentsBox.scrollTop = commentsBox.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function sendComment() {
+    const author = authorInput.value.trim();
+    const body   = bodyInput.value.trim();
+
+    if (!author)  { authorInput.focus(); return; }
+    if (!body)    { bodyInput.focus(); return; }
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+    // Формат который ждёт твой CommentConsumer:
+    // receive_json ожидает { author: "...", data: "..." }
+    socket.send(JSON.stringify({ author: author, data: body }));
+    bodyInput.value = '';
+    bodyInput.focus();
+  }
+
+  function connect() {
+    setStatus('', 'Connecting...');
+    sendBtn.disabled = true;
+
+    socket = new WebSocket(WS_URL);
+
+    socket.onopen = () => {
+      setStatus('connected', 'Connected');
+      sendBtn.disabled = false;
+    };
+
+    socket.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      // Consumer отправляет { body: "...", author: "..." }
+      addComment(data.author, data.body);
+    };
+
+    socket.onclose = () => {
+      setStatus('error', 'Disconnected — reconnecting in 3s...');
+      sendBtn.disabled = true;
+      setTimeout(connect, 3000);
+    };
+
+    socket.onerror = () => {
+      setStatus('error', 'Connection error');
+    };
+  }
+
+  sendBtn.addEventListener('click', sendComment);
+
+  bodyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      sendComment();
+    }
+  });
+
+  connect();
+</script>
+
+</body>
+</html>
