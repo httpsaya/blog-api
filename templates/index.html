@@ -230,7 +230,27 @@
   const sendBtn     = document.getElementById('send-btn');
   const authorInput = document.getElementById('author-input');
   const bodyInput   = document.getElementById('body-input');
-
+  const evtSource   = new EventSource("/api/posts/stream/");
+  
+  evtSource.onopen = () => {
+    console.log("SSE connected");
+  };
+  
+  evtSource.onmessage = (event) => {
+    const newPost = JSON.parse(event.data);
+    console.log("Новый пост:", newPost);
+    
+    const notification = document.createElement('div');
+    notification.style = "background: #fff9c4; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 13px;";
+    notification.innerHTML = `📢 <strong>Новый пост:</strong> ${newPost.title} (${newPost.author.email})`;
+    document.getElementById('comments-box').prepend(notification);
+  };
+  
+  evtSource.onerror = (e) => {
+    console.error("SSE error:", e);
+    evtSource.close(); // закрыть чтобы не спамил переподключениями
+  };
+  
   let socket = null;
 
   function setStatus(state, text) {

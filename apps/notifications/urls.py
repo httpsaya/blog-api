@@ -1,8 +1,11 @@
-# apps/blog/urls.py (или твое приложение)
+# Django Modules
 from django.urls import path
-from .views import get_page
+
+# Project Modules
+from .views import get_page, sse_notifications
 
 urlpatterns = [
-    # Важно: убедись, что этот urls.py включен в основной urls.py проекта через include()
     path('posts/<slug:slug>/comments/', get_page, name='post_comments'),
+
+    path('posts/stream/', sse_notifications)
 ]
