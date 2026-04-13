@@ -3,7 +3,10 @@ from django.db.models import (
     Model, 
     ForeignKey, 
     CASCADE, 
-    TextField)
+    TextField,
+    BooleanField,
+    Index,
+    )
 
 # Project Modules
 from apps.users.models import CustomUser
@@ -27,3 +30,27 @@ class Comment(Abstract):
     )
 
     body = TextField()
+
+
+class Notification(Abstract):
+
+    recipient = ForeignKey(
+        CustomUser,
+        on_delete=CASCADE,
+        related_name='notifications'
+    )
+    comment = ForeignKey(
+        Comment,
+        on_delete=CASCADE,
+        related_name='notifications'
+    )
+    is_read = BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            Index(fields=['recipient', 'is_read']),
+        ]
+    
+    def __str__(self):
+        return f'Notification for {self.recipient} on comment {self.comment_id}'

@@ -7,6 +7,7 @@ from django.dispatch import receiver
 
 # Project Modules
 from apps.blog.models import Post
+from .models import Comment, Notification
 
 # Channel Modules
 from channels.layers import get_channel_layer
@@ -37,4 +38,28 @@ def notify_post(
             'type': 'post.message',
             'data': payload
         }
+    )
+
+
+@receiver(post_save, sender=Comment)
+def create_notification(
+    sender, 
+    instance, 
+    created, 
+    **kwargs: dict[str, Any]
+    ):
+    """
+    Create a Notification whenever a new Comment is saved
+    """
+
+    if not created:
+        return
+    
+    post_author = instance.post.author
+    if instance.author == post_author:
+        return 
+    
+    Notification.objects.create(
+        recipient=post_author,
+        comment=instance
     )

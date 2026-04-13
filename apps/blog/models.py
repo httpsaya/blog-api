@@ -56,7 +56,8 @@ class Post(Abstract):
     STATUS_MAX_LENGTH = 200
     STATUS_CHOICES = [
         ('draft', 'Draft',),
-        ('published', 'Published')
+        ('published', 'Published'),
+        ('scheduled', 'Scheduled')
     ]
     author = ForeignKey(
         to=User,

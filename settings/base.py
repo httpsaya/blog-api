@@ -138,6 +138,19 @@ CACHES = {
     }
 }
 
+
+# ----------------------------------------------
+# Celery Configuration
+#
+_celery_redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"  # noqa: F405
+CELERY_BROKER_URL = _celery_redis_url
+CELERY_RESULT_BACKEND = _celery_redis_url
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+
 # -----------------------------------------------
 # LOGGERS
 #

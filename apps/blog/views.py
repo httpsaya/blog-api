@@ -34,6 +34,10 @@ from apps.blog.serializers import (
 # Loggers
 import logging
 
+# Signal Modules
+from .tasks import process_new_comment
+
+
 logger = logging.getLogger("blog")
 
 
@@ -217,6 +221,8 @@ class PostViewSet(ViewSet):
 
                 if serializer.is_valid():
                     comment = serializer.save(author=request.user, post=post)
+                    
+                    process_new_comment.delay(comment.id)
 
                     logger.info(
                         "Comment created on post %s by %s",
